@@ -47,7 +47,7 @@ interface SpinnerConfig {
 
 const CONFIG: SpinnerConfig = {
   wheelSize: 300,
-  maxOptions: 8,
+  maxOptions: 12,
   minOptions: 2,
   maxOptionLength: 50,
   minRotations: 3,
@@ -139,14 +139,23 @@ const SpinnerApp: React.FC = () => {
   // --- Random degrees (keeps “natural” random feel, no forced center) ---
   const randomDegrees = (): number => {
     const segmentAngle = 360 / options.length;
-    const randomFloat = Math.random() * 360;
-    const discreteDegrees =
-      Math.round(randomFloat / segmentAngle) * segmentAngle;
+
+    // Pick a random segment
+    const segmentIndex = Math.floor(Math.random() * options.length);
+
+    // Pick a random point inside that segment, avoiding exact edges
+    const margin = segmentAngle * 0.1; // 10% margin from each edge
+    const offsetWithinSegment =
+      margin + Math.random() * (segmentAngle - 2 * margin);
+
+    const targetAngle = segmentIndex * segmentAngle + offsetWithinSegment;
+
     const spins =
       Math.floor(
         Math.random() * (CONFIG.maxRotations - CONFIG.minRotations + 1)
       ) + CONFIG.minRotations;
-    return 360 * spins + discreteDegrees;
+
+    return spins * 360 + targetAngle;
   };
 
   // --- Spin launcher ---
@@ -313,31 +322,6 @@ const SpinnerApp: React.FC = () => {
             />
           </div>
         </div>
-
-        {!isSpinning && (
-          <div
-            style={{
-              textAlign: "center",
-              margin: "1rem 0",
-              padding: "0.5rem",
-              background: "#f4f4f4",
-              borderRadius: "4px",
-              fontSize: "12px",
-            }}
-          >
-            <div>
-              <strong>Total Rotation:</strong> {currentRotation.toFixed(1)}°
-            </div>
-            <div>
-              <strong>Current Winner:</strong>{" "}
-              {options.length > 0 ? getCurrentWinner(currentRotation) : "None"}
-            </div>
-            <div>
-              <strong>Segment Angle:</strong>{" "}
-              {options.length > 0 ? (360 / options.length).toFixed(1) : 0}°
-            </div>
-          </div>
-        )}
 
         <div className="spin-button-container">
           <Button
