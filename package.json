@@ -2,6 +2,7 @@
   "name": "spin-wheel",
   "version": "1.0.0",
   "description": "A React + Carbon Design System spinner wheel application",
+  "homepage": "https://pages.github.com/AmruthKrishnaG/spin-wheel/",
   "private": true,
   "dependencies": {
     "@carbon/react": "^1.37.0",
