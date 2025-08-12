@@ -1,4 +1,3 @@
-// SpinnerApp.tsx  (patched)
 import React, {
   useState,
   useRef,
@@ -14,7 +13,6 @@ import {
   UnorderedList,
   ListItem,
   Tile,
-  Modal,
   Form,
   FormGroup,
   Stack,
@@ -32,7 +30,6 @@ interface SpinnerConfig {
   maxRotations: number;
   animationDuration: number;
   easingFunction: string;
-  segmentBorderColor: string;
   wheelBorderColor: string;
   wheelBorderWidth: number;
   pointerColor: string;
@@ -54,7 +51,6 @@ const CONFIG: SpinnerConfig = {
   maxRotations: 6,
   animationDuration: 3000,
   easingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
-  segmentBorderColor: "#fff",
   wheelBorderColor: "#393939",
   wheelBorderWidth: 4,
   pointerColor: "#da1e28",
@@ -67,119 +63,70 @@ const CONFIG: SpinnerConfig = {
   lightness: 60,
 };
 
-// The wheel's "top" (12 o'clock) expressed in the wheel's coordinate system
-// (in CSS: 0deg = right/3 o'clock, increasing clockwise → top is 270deg)
 const POINTER_AT_DEG = 270;
-
-/** safe modulo */
 const mod = (n: number, m: number) => ((n % m) + m) % m;
 
 const SpinnerApp: React.FC = () => {
-  const [options, setOptions] = useState<string[]>([...CONFIG.defaultOptions]);
-  const [newOption, setNewOption] = useState<string>("");
-  const [isSpinning, setIsSpinning] = useState<boolean>(false);
-  const [winner, setWinner] = useState<string | null>(null);
-  const [showResult, setShowResult] = useState<boolean>(false);
-  const [currentRotation, setCurrentRotation] = useState<number>(0); // cumulative rotation in degrees
-  const [formError, setFormError] = useState<string>("");
-  const [showSuccess, setShowSuccess] = useState<boolean>(false);
-
-  // If we change options and want to preserve the *logical* winner (label),
-  // we'll store that label here BEFORE we mutate options, then the effect will
-  // realign the rotation so that same label is under the pointer.
+  const [options, setOptions] = useState([...CONFIG.defaultOptions]);
+  const [newOption, setNewOption] = useState("");
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [currentRotation, setCurrentRotation] = useState(0);
+  const [formError, setFormError] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
   const [pendingPreservedWinner, setPendingPreservedWinner] = useState<
     string | null
   >(null);
 
   const wheelRef = useRef<HTMLDivElement>(null);
 
-  // --- Winner calculation (correct mapping to the 12 o'clock pointer) ---
-  const getCurrentWinner = (totalDegrees: number): string => {
+  const getCurrentWinner = (totalDegrees: number) => {
     if (options.length === 0) return "";
     const segmentAngle = 360 / options.length;
-
-    // reduce rotation to 0..359
     const rot = mod(totalDegrees, 360);
-
-    // find wheel-angle currently at top: topWheelAngle = (POINTER_AT_DEG - rotation) mod 360
     const topWheelAngle = mod(POINTER_AT_DEG - rot, 360);
-
     const segmentIndex =
       Math.floor(topWheelAngle / segmentAngle) % options.length;
     return options[segmentIndex];
   };
 
-  // --- When options change, try to keep the pointer pointing at the same label (if it still exists) ---
   useEffect(() => {
     if (!pendingPreservedWinner) return;
-
     const label = pendingPreservedWinner;
-    setPendingPreservedWinner(null); // consume pending
-
+    setPendingPreservedWinner(null);
     const index = options.indexOf(label);
-    if (index < 0) {
-      // Label no longer exists — do nothing (or you could reset rotation)
-      return;
-    }
-
+    if (index < 0) return;
     const segmentAngle = 360 / options.length;
-    const centerWheelAngle = index * segmentAngle + segmentAngle / 2; // center of that segment
-
-    // targetBase is the canonical rotation (0..359) that centers this option at the pointer:
-    // targetBase ≡ POINTER_AT_DEG - centerWheelAngle  (mod 360)
+    const centerWheelAngle = index * segmentAngle + segmentAngle / 2;
     const targetBase = mod(POINTER_AT_DEG - centerWheelAngle, 360);
-
-    // choose nearest equivalent rotation to avoid big jumps
     const k = Math.round((currentRotation - targetBase) / 360);
-    const targetRotation = targetBase + 360 * k;
-
-    setCurrentRotation(targetRotation);
+    setCurrentRotation(targetBase + 360 * k);
   }, [options, pendingPreservedWinner, currentRotation]);
 
-  // --- Random degrees (keeps “natural” random feel, no forced center) ---
-  const randomDegrees = (): number => {
+  const randomDegrees = () => {
     const segmentAngle = 360 / options.length;
-
-    // Pick a random segment
     const segmentIndex = Math.floor(Math.random() * options.length);
-
-    // Pick a random point inside that segment, avoiding exact edges
-    const margin = segmentAngle * 0.1; // 10% margin from each edge
+    const margin = segmentAngle * 0.1;
     const offsetWithinSegment =
       margin + Math.random() * (segmentAngle - 2 * margin);
-
     const targetAngle = segmentIndex * segmentAngle + offsetWithinSegment;
-
     const spins =
       Math.floor(
         Math.random() * (CONFIG.maxRotations - CONFIG.minRotations + 1)
       ) + CONFIG.minRotations;
-
     return spins * 360 + targetAngle;
   };
 
-  // --- Spin launcher ---
-  const launchSpin = async (): Promise<void> => {
+  const launchSpin = () => {
     if (isSpinning || options.length < CONFIG.minOptions) return;
-
     setIsSpinning(true);
-    setWinner(null);
-    setShowResult(false);
-
     const spinDegrees = randomDegrees();
-    const newRotation = currentRotation + spinDegrees;
-    setCurrentRotation(newRotation);
-
+    setCurrentRotation(currentRotation + spinDegrees);
     setTimeout(() => {
-      const winningOption = getCurrentWinner(newRotation);
-      setWinner(winningOption);
       setIsSpinning(false);
-      setShowResult(true);
     }, CONFIG.animationDuration);
   };
 
-  // --- Form handlers: when we mutate options, capture the current winner BEFORE changing the array ---
-  const validateOption = (value: string): string => {
+  const validateOption = (value: string) => {
     if (!value.trim()) return "Option cannot be empty";
     if (value.trim().length > CONFIG.maxOptionLength)
       return `Option must be ${CONFIG.maxOptionLength} characters or less`;
@@ -189,15 +136,13 @@ const SpinnerApp: React.FC = () => {
     return "";
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>): void => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const error = validateOption(newOption);
     if (error) {
       setFormError(error);
       return;
     }
-
-    // preserve the label currently under the pointer so we can keep it under the pointer after adding
     setPendingPreservedWinner(getCurrentWinner(currentRotation));
     setOptions([...options, newOption.trim()]);
     setNewOption("");
@@ -206,23 +151,19 @@ const SpinnerApp: React.FC = () => {
     setTimeout(() => setShowSuccess(false), CONFIG.successNotificationDuration);
   };
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    const value = e.target.value;
-    setNewOption(value);
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setNewOption(e.target.value);
     if (formError) setFormError("");
   };
 
-  const handleRemoveOption = (index: number): void => {
+  const handleRemoveOption = (index: number) => {
     if (options.length > CONFIG.minOptions) {
-      // preserve winner label
       setPendingPreservedWinner(getCurrentWinner(currentRotation));
-      const updatedOptions = options.filter((_, i) => i !== index);
-      setOptions(updatedOptions);
+      setOptions(options.filter((_, i) => i !== index));
     }
   };
 
-  const handleClearOptions = (): void => {
-    // reset to defaults — clear preservation and reset rotation for clarity
+  const handleClearOptions = () => {
     setPendingPreservedWinner(null);
     setOptions([...CONFIG.defaultOptions]);
     setNewOption("");
@@ -230,16 +171,10 @@ const SpinnerApp: React.FC = () => {
     setCurrentRotation(0);
   };
 
-  const closeResultModal = (): void => {
-    setShowResult(false);
-  };
-
-  // --- Render ---
   return (
     <Grid className="spinner-app">
       <Column lg={16} md={8} sm={4}>
         <h1>Spinner Wheel</h1>
-
         {showSuccess && (
           <InlineNotification
             kind="success"
@@ -249,7 +184,6 @@ const SpinnerApp: React.FC = () => {
             className="success-notification"
           />
         )}
-
         <div className="wheel-container">
           <div className="wheel-pin" />
           <div
@@ -278,7 +212,7 @@ const SpinnerApp: React.FC = () => {
                 ")",
             }}
           >
-            {options.map((option: string, index: number) => {
+            {options.map((option, index) => {
               const segmentAngle = 360 / options.length;
               const textRotation = segmentAngle * index + segmentAngle / 2;
               return (
@@ -303,7 +237,7 @@ const SpinnerApp: React.FC = () => {
                       color: CONFIG.segmentTextColor,
                       textShadow: CONFIG.segmentTextShadow,
                       fontSize: "14px",
-                      fontWeight: "600",
+                      fontWeight: 600,
                       marginLeft: "20px",
                       whiteSpace: "nowrap",
                     }}
@@ -322,7 +256,6 @@ const SpinnerApp: React.FC = () => {
             />
           </div>
         </div>
-
         <div className="spin-button-container">
           <Button
             kind="primary"
@@ -334,7 +267,6 @@ const SpinnerApp: React.FC = () => {
             {isSpinning ? "Spinning..." : "SPIN"}
           </Button>
         </div>
-
         <Tile className="options-section">
           <h3>Manage Options</h3>
           <Form onSubmit={handleSubmit} className="add-option-form">
@@ -378,11 +310,10 @@ const SpinnerApp: React.FC = () => {
               </Stack>
             </FormGroup>
           </Form>
-
           <div className="current-options">
             <h4>Current Options ({options.length})</h4>
             <UnorderedList className="options-list">
-              {options.map((option: string, index: number) => (
+              {options.map((option, index) => (
                 <ListItem key={index} className="option-item">
                   <div className="option-content">
                     <span className="option-number">#{index + 1}</span>
@@ -403,8 +334,7 @@ const SpinnerApp: React.FC = () => {
             <div className="options-info">
               <p>
                 <strong>Requirements:</strong> Minimum {CONFIG.minOptions}{" "}
-                options required to spin • Maximum {CONFIG.maxOptions} options
-                allowed
+                options required • Maximum {CONFIG.maxOptions} options allowed
               </p>
               {options.length < CONFIG.minOptions && (
                 <InlineNotification
@@ -417,21 +347,6 @@ const SpinnerApp: React.FC = () => {
             </div>
           </div>
         </Tile>
-
-        <Modal
-          open={showResult}
-          onRequestClose={closeResultModal}
-          modalHeading="🎉 Spin Result!"
-          modalLabel="Winner"
-          primaryButtonText="Spin Again"
-          secondaryButtonText="Close"
-          onRequestSubmit={launchSpin}
-          onSecondarySubmit={closeResultModal}
-        >
-          <p>
-            The winner is: <strong>{winner}</strong>
-          </p>
-        </Modal>
       </Column>
     </Grid>
   );
