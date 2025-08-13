@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/AmruthKrishnaG/spin-wheel/static/css/main.a0d4ed83.css",
-    "main.js": "/AmruthKrishnaG/spin-wheel/static/js/main.78b5ab0b.js",
+    "main.js": "/AmruthKrishnaG/spin-wheel/static/js/main.77db8012.js",
     "static/media/IBMPlexSerif-SemiBoldItalic-Cyrillic.woff2": "/AmruthKrishnaG/spin-wheel/static/media/IBMPlexSerif-SemiBoldItalic-Cyrillic.2861a6629748147a32ea.woff2",
     "static/media/IBMPlexSerif-SemiBoldItalic-Latin1.woff2": "/AmruthKrishnaG/spin-wheel/static/media/IBMPlexSerif-SemiBoldItalic-Latin1.6305238484fd3cc045b0.woff2",
     "static/media/IBMPlexSerif-Italic-Cyrillic.woff2": "/AmruthKrishnaG/spin-wheel/static/media/IBMPlexSerif-Italic-Cyrillic.44c432e4a678791737ca.woff2",
@@ -94,10 +94,10 @@
     "static/media/IBMPlexMono-Regular-Latin3.woff2": "/AmruthKrishnaG/spin-wheel/static/media/IBMPlexMono-Regular-Latin3.cacfd1d7dbd14067b970.woff2",
     "index.html": "/AmruthKrishnaG/spin-wheel/index.html",
     "main.a0d4ed83.css.map": "/AmruthKrishnaG/spin-wheel/static/css/main.a0d4ed83.css.map",
-    "main.78b5ab0b.js.map": "/AmruthKrishnaG/spin-wheel/static/js/main.78b5ab0b.js.map"
+    "main.77db8012.js.map": "/AmruthKrishnaG/spin-wheel/static/js/main.77db8012.js.map"
   },
   "entrypoints": [
     "static/css/main.a0d4ed83.css",
-    "static/js/main.78b5ab0b.js"
+    "static/js/main.77db8012.js"
   ]
 }
