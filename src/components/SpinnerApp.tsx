@@ -1,3 +1,5 @@
+// SpinnerApp.tsx — Original text positioning + edit/delete/clear all + no winner modal
+
 import React, {
   useState,
   useRef,
@@ -18,7 +20,7 @@ import {
   Stack,
   InlineNotification,
 } from "@carbon/react";
-import { Add, TrashCan, Play, Reset } from "@carbon/react/icons";
+import { Add, TrashCan, Play, Reset, Edit } from "@carbon/react/icons";
 import "./SpinnerApp.scss";
 
 interface SpinnerConfig {
@@ -126,11 +128,13 @@ const SpinnerApp: React.FC = () => {
     }, CONFIG.animationDuration);
   };
 
-  const validateOption = (value: string) => {
-    if (!value.trim()) return "Option cannot be empty";
-    if (value.trim().length > CONFIG.maxOptionLength)
+  const validateOption = (value: string, skipDuplicateCheck = false) => {
+    const trimmed = value.trim();
+    if (!trimmed) return "Option cannot be empty";
+    if (trimmed.length > CONFIG.maxOptionLength)
       return `Option must be ${CONFIG.maxOptionLength} characters or less`;
-    if (options.includes(value.trim())) return "This option already exists";
+    if (!skipDuplicateCheck && options.includes(trimmed))
+      return "This option already exists";
     if (options.length >= CONFIG.maxOptions)
       return `Maximum ${CONFIG.maxOptions} options allowed`;
     return "";
@@ -157,15 +161,30 @@ const SpinnerApp: React.FC = () => {
   };
 
   const handleRemoveOption = (index: number) => {
-    if (options.length > CONFIG.minOptions) {
-      setPendingPreservedWinner(getCurrentWinner(currentRotation));
-      setOptions(options.filter((_, i) => i !== index));
+    setOptions(options.filter((_, i) => i !== index));
+  };
+
+  const handleEditOption = (index: number) => {
+    const current = options[index];
+    const updatedText = prompt("Edit option:", current);
+    if (updatedText === null) return;
+    const trimmed = updatedText.trim();
+    if (!trimmed) return;
+
+    const error = validateOption(trimmed, trimmed === current);
+    if (error) {
+      alert(error);
+      return;
     }
+
+    const updated = [...options];
+    updated[index] = trimmed;
+    setOptions(updated);
   };
 
   const handleClearOptions = () => {
     setPendingPreservedWinner(null);
-    setOptions([...CONFIG.defaultOptions]);
+    setOptions([]);
     setNewOption("");
     setFormError("");
     setCurrentRotation(0);
@@ -184,6 +203,7 @@ const SpinnerApp: React.FC = () => {
             className="success-notification"
           />
         )}
+
         <div className="wheel-container">
           <div className="wheel-pin" />
           <div
@@ -199,17 +219,21 @@ const SpinnerApp: React.FC = () => {
                 ? `transform ${CONFIG.animationDuration}ms ${CONFIG.easingFunction}`
                 : "none",
               background:
-                `conic-gradient(from 0deg, ` +
+                `conic-gradient(` +
                 options
                   .map((_, index) => {
-                    const segmentAngle = 360 / options.length;
-                    const startAngle = segmentAngle * index;
-                    const endAngle = segmentAngle * (index + 1);
+                    const segAngle = 360 / options.length;
+                    const startAngle = segAngle * index;
+                    const endAngle = segAngle * (index + 1);
                     const hue = (360 / options.length) * index;
                     return `hsl(${hue}, ${CONFIG.saturation}%, ${CONFIG.lightness}%) ${startAngle}deg ${endAngle}deg`;
                   })
                   .join(", ") +
                 ")",
+              position: "relative",
+              borderStyle: "solid",
+              borderRadius: "50%",
+              overflow: "hidden",
             }}
           >
             {options.map((option, index) => {
@@ -256,6 +280,7 @@ const SpinnerApp: React.FC = () => {
             />
           </div>
         </div>
+
         <div className="spin-button-container">
           <Button
             kind="primary"
@@ -267,6 +292,7 @@ const SpinnerApp: React.FC = () => {
             {isSpinning ? "Spinning..." : "SPIN"}
           </Button>
         </div>
+
         <Tile className="options-section">
           <h3>Manage Options</h3>
           <Form onSubmit={handleSubmit} className="add-option-form">
@@ -283,9 +309,7 @@ const SpinnerApp: React.FC = () => {
                   maxLength={CONFIG.maxOptionLength}
                   helperText={`${newOption.length}/${
                     CONFIG.maxOptionLength
-                  } characters • ${
-                    CONFIG.maxOptions - options.length
-                  } slots remaining`}
+                  } chars • ${CONFIG.maxOptions - options.length} slots left`}
                 />
                 <div className="form-buttons">
                   <Button
@@ -304,12 +328,13 @@ const SpinnerApp: React.FC = () => {
                     onClick={handleClearOptions}
                     renderIcon={Reset}
                   >
-                    Reset to Default
+                    Clear All
                   </Button>
                 </div>
               </Stack>
             </FormGroup>
           </Form>
+
           <div className="current-options">
             <h4>Current Options ({options.length})</h4>
             <UnorderedList className="options-list">
@@ -319,22 +344,31 @@ const SpinnerApp: React.FC = () => {
                     <span className="option-number">#{index + 1}</span>
                     <span className="option-text">{option}</span>
                   </div>
-                  <Button
-                    kind="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveOption(index)}
-                    disabled={options.length <= CONFIG.minOptions}
-                    renderIcon={TrashCan}
-                    iconDescription="Remove option"
-                    hasIconOnly
-                  />
+                  <div>
+                    <Button
+                      kind="ghost"
+                      size="sm"
+                      onClick={() => handleEditOption(index)}
+                      renderIcon={Edit}
+                      iconDescription="Edit option"
+                      hasIconOnly
+                    />
+                    <Button
+                      kind="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveOption(index)}
+                      renderIcon={TrashCan}
+                      iconDescription="Remove option"
+                      hasIconOnly
+                    />
+                  </div>
                 </ListItem>
               ))}
             </UnorderedList>
             <div className="options-info">
               <p>
                 <strong>Requirements:</strong> Minimum {CONFIG.minOptions}{" "}
-                options required • Maximum {CONFIG.maxOptions} options allowed
+                options required to spin • Maximum {CONFIG.maxOptions} allowed
               </p>
               {options.length < CONFIG.minOptions && (
                 <InlineNotification
